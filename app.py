@@ -36,17 +36,12 @@ symbols = [
 if st.button("Scan"):
 
     rows = []
-    errors = []
 
     progress = st.progress(0)
-    status = st.empty()
 
     for idx, symbol in enumerate(symbols):
 
-        status.write(f"Scanning {symbol}...")
-
         try:
-
             df = yf.download(
                 symbol,
                 period="6mo",
@@ -55,19 +50,15 @@ if st.button("Scan"):
                 threads=False
             )
 
-            if df.empty or len(df) < 50:
+            if len(df) < 50:
                 continue
 
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
 
-            high = df["High"].squeeze()
-            close = df["Close"].squeeze()
+            high = df["High"].astype(float)
+            close = df["Close"].astype(float)
 
-            high = pd.to_numeric(high, errors="coerce")
-            close = pd.to_numeric(close, errors="coerce")
-
-            # Ignore stocks that broke 20D high in last 20 sessions
             breakout_found = False
 
             for i in range(len(df) - 20, len(df)):
@@ -85,10 +76,7 @@ if st.button("Scan"):
             if breakout_found:
                 continue
 
-            current_close = float(close.iloc[-1])
-
-            if pd.isna(current_close):
-                continue
+            current_close = close.iloc[-1]
 
             current_20d_high = high.rolling(20).max().shift(1).iloc[-1]
 
@@ -100,24 +88,24 @@ if st.button("Scan"):
 
             rows.append({
                 "Symbol": symbol,
-                "CMP": round(current_close, 2),
+                "CMP": round(float(current_close), 2),
                 "20D High": round(float(current_20d_high), 2),
                 "GTT Price": round(float(current_20d_high), 2)
             })
 
-        except Exception as e:
-            errors.append(f"{symbol}: {str(e)}")
+        except:
+            pass
 
         progress.progress((idx + 1) / len(symbols))
 
-    status.empty()
+    result = pd.DataFrame(rows)
 
-    st.success(f"Scan Complete. Found {len(rows)} stocks.")
-
-    if rows:
-
-        result = pd.DataFrame(rows)
+    if result.empty:
+        st.warning("No stocks found")
+    else:
         result = result.sort_values("Symbol")
+
+        st.success(f"Total Stocks: {len(result)}")
 
         st.dataframe(
             result,
@@ -130,14 +118,6 @@ if st.button("Scan"):
         st.download_button(
             "Download CSV",
             csv,
-            file_name="gtt_watchlist.csv",
-            mime="text/csv"
+            "gtt_watchlist.csv",
+            "text/csv"
         )
-
-    else:
-        st.warning("No stocks found.")
-
-    if errors:
-        with st.expander("Errors"):
-            for err in errors:
-                st.write(err)
