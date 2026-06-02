@@ -62,11 +62,12 @@ if st.button("Scan"):
                 df.columns = df.columns.get_level_values(0)
 
             high = df["High"].squeeze()
-close = df["Close"].squeeze()
+            close = df["Close"].squeeze()
 
-high = pd.to_numeric(high, errors="coerce")
-close = pd.to_numeric(close, errors="coerce")
+            high = pd.to_numeric(high, errors="coerce")
+            close = pd.to_numeric(close, errors="coerce")
 
+            # Ignore stocks that broke 20D high in last 20 sessions
             breakout_found = False
 
             for i in range(len(df) - 20, len(df)):
@@ -74,8 +75,8 @@ close = pd.to_numeric(close, errors="coerce")
                 if i < 20:
                     continue
 
-                prev20_high = float(high.iloc[i-20:i].max())
-                current_high = float(high.iloc[i])
+                prev20_high = high.iloc[i-20:i].max()
+                current_high = high.iloc[i]
 
                 if current_high > prev20_high:
                     breakout_found = True
@@ -84,11 +85,12 @@ close = pd.to_numeric(close, errors="coerce")
             if breakout_found:
                 continue
 
-           current_close = round(float(close.iloc[-1]), 2)
+            current_close = float(close.iloc[-1])
 
-            current_20d_high = float(
-                high.rolling(20).max().shift(1).iloc[-1]
-            )
+            if pd.isna(current_close):
+                continue
+
+            current_20d_high = high.rolling(20).max().shift(1).iloc[-1]
 
             if pd.isna(current_20d_high):
                 continue
@@ -99,8 +101,8 @@ close = pd.to_numeric(close, errors="coerce")
             rows.append({
                 "Symbol": symbol,
                 "CMP": round(current_close, 2),
-                "20D High": round(current_20d_high, 2),
-                "GTT Price": round(current_20d_high, 2)
+                "20D High": round(float(current_20d_high), 2),
+                "GTT Price": round(float(current_20d_high), 2)
             })
 
         except Exception as e:
@@ -113,6 +115,7 @@ close = pd.to_numeric(close, errors="coerce")
     st.success(f"Scan Complete. Found {len(rows)} stocks.")
 
     if rows:
+
         result = pd.DataFrame(rows)
         result = result.sort_values("Symbol")
 
