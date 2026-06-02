@@ -61,8 +61,11 @@ if st.button("Scan"):
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
 
-            high = pd.to_numeric(df["High"], errors="coerce")
-            close = pd.to_numeric(df["Close"], errors="coerce")
+            high = df["High"].squeeze()
+close = df["Close"].squeeze()
+
+high = pd.to_numeric(high, errors="coerce")
+close = pd.to_numeric(close, errors="coerce")
 
             breakout_found = False
 
@@ -81,7 +84,7 @@ if st.button("Scan"):
             if breakout_found:
                 continue
 
-            current_close = float(close.iloc[-1])
+           current_close = round(float(close.iloc[-1]), 2)
 
             current_20d_high = float(
                 high.rolling(20).max().shift(1).iloc[-1]
