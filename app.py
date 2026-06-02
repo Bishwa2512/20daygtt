@@ -2,7 +2,10 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 
-st.set_page_config(page_title="Nifty 20D High GTT Scanner", layout="wide")
+st.set_page_config(
+    page_title="Nifty 20D High GTT Scanner",
+    layout="wide"
+)
 
 st.title("Nifty 20D High GTT Scanner")
 
@@ -36,12 +39,17 @@ symbols = [
 if st.button("Scan"):
 
     rows = []
+    errors = []
 
     progress = st.progress(0)
+    status = st.empty()
 
     for idx, symbol in enumerate(symbols):
 
+        status.write(f"Scanning {symbol}")
+
         try:
+
             df = yf.download(
                 symbol,
                 period="6mo",
@@ -50,18 +58,24 @@ if st.button("Scan"):
                 threads=False
             )
 
-            if len(df) < 50:
+            if df.empty or len(df) < 50:
                 continue
 
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
 
-            high = df["High"].astype(float)
-            close = df["Close"].astype(float)
+            high = pd.to_numeric(df["High"], errors="coerce")
+            close = pd.to_numeric(df["Close"], errors="coerce")
+
+            high = high.dropna()
+            close = close.dropna()
+
+            if len(high) < 50 or len(close) < 50:
+                continue
 
             breakout_found = False
 
-            for i in range(len(df) - 20, len(df)):
+            for i in range(len(high) - 20, len(high)):
 
                 if i < 20:
                     continue
@@ -76,9 +90,11 @@ if st.button("Scan"):
             if breakout_found:
                 continue
 
-            current_close = close.iloc[-1]
+            current_close = float(close.iloc[-1])
 
-            current_20d_high = high.rolling(20).max().shift(1).iloc[-1]
+            current_20d_high = float(
+                high.rolling(20).max().shift(1).iloc[-1]
+            )
 
             if pd.isna(current_20d_high):
                 continue
@@ -87,25 +103,26 @@ if st.button("Scan"):
                 continue
 
             rows.append({
-                "Symbol": symbol,
-                "CMP": round(float(current_close), 2),
-                "20D High": round(float(current_20d_high), 2),
-                "GTT Price": round(float(current_20d_high), 2)
+                "Symbol": symbol.replace(".NS", ""),
+                "CMP": round(current_close, 2),
+                "20D High": round(current_20d_high, 2),
+                "GTT Price": round(current_20d_high, 2)
             })
 
-        except:
-            pass
+        except Exception as e:
+            errors.append(f"{symbol}: {e}")
 
         progress.progress((idx + 1) / len(symbols))
 
+    status.empty()
+
     result = pd.DataFrame(rows)
 
-    if result.empty:
-        st.warning("No stocks found")
-    else:
-        result = result.sort_values("Symbol")
+    st.success(f"Scan Complete. Found {len(result)} stocks")
 
-        st.success(f"Total Stocks: {len(result)}")
+    if not result.empty:
+
+        result = result.sort_values("Symbol")
 
         st.dataframe(
             result,
@@ -118,6 +135,13 @@ if st.button("Scan"):
         st.download_button(
             "Download CSV",
             csv,
-            "gtt_watchlist.csv",
-            "text/csv"
+            file_name="gtt_watchlist.csv",
+            mime="text/csv"
         )
+
+    else:
+        st.warning("No stocks found")
+
+    if errors:
+        with st.expander("Errors"):
+            st.write(errors)
