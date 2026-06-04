@@ -3,11 +3,11 @@ import pandas as pd
 import yfinance as yf
 
 st.set_page_config(
-    page_title="20 Day Breakout Scanner",
+    page_title="Nifty 20D High Scanner",
     layout="wide"
 )
 
-st.title("20 Day Breakout Scanner")
+st.title("Nifty 20D High GTT Scanner")
 
 symbols = [
     "ADANIENT.NS","ADANIGREEN.NS","ADANIPORTS.NS","ADANIPOWER.NS",
@@ -38,7 +38,7 @@ symbols = [
 
 if st.button("Scan"):
 
-    rows = []
+    watchlist_rows = []
     buy_rows = []
 
     progress = st.progress(0)
@@ -46,7 +46,7 @@ if st.button("Scan"):
 
     for idx, symbol in enumerate(symbols):
 
-        status.write(f"Scanning {symbol}...")
+        status.write(f"Scanning {symbol}")
 
         try:
 
@@ -67,7 +67,6 @@ if st.button("Scan"):
             high = df["High"].astype(float)
             close = df["Close"].astype(float)
 
-            # ----- BUY SIGNAL CHECK -----
             current_close = float(close.iloc[-1])
 
             current_20d_high = float(
@@ -77,15 +76,22 @@ if st.button("Scan"):
             if pd.isna(current_20d_high):
                 continue
 
+            # -------------------------
+            # BUY SIGNALS
+            # -------------------------
+
             if current_close >= current_20d_high:
 
                 buy_rows.append({
                     "Symbol": symbol.replace(".NS", ""),
                     "CMP": round(current_close, 2),
-                    "20D High": round(current_20d_high, 2)
+                    "20D High": round(current_20d_high, 2),
+                    "Signal": "BUY"
                 })
 
-            # ----- EXISTING WATCHLIST LOGIC -----
+            # -------------------------
+            # YOUR ORIGINAL LOGIC
+            # -------------------------
 
             breakout_found = False
 
@@ -107,27 +113,35 @@ if st.button("Scan"):
             if current_close > current_20d_high:
                 continue
 
-            rows.append({
+            watchlist_rows.append({
                 "Symbol": symbol.replace(".NS", ""),
                 "CMP": round(current_close, 2),
                 "20D High": round(current_20d_high, 2),
-                "GTT Price": round(current_20d_high, 2)
+                "GTT Price": round(current_20d_high, 2),
+                "Signal": "WAIT"
             })
 
-        except:
+        except Exception:
             pass
 
         progress.progress((idx + 1) / len(symbols))
 
+    progress.empty()
     status.empty()
+
+    # ===================================
+    # BUY SIGNALS
+    # ===================================
 
     buy_df = pd.DataFrame(buy_rows)
 
-    if not buy_df.empty:
+    st.subheader("🚀 BUY SIGNALS TODAY")
 
-        st.error(
-            f"🚀 BUY SIGNALS TODAY ({len(buy_df)})"
-        )
+    if buy_df.empty:
+
+        st.success("No Buy Signals Today")
+
+    else:
 
         st.dataframe(
             buy_df.sort_values("Symbol"),
@@ -135,33 +149,33 @@ if st.button("Scan"):
             hide_index=True
         )
 
-    else:
+    st.divider()
 
-        st.success("No Buy Signals Today")
+    # ===================================
+    # WATCHLIST
+    # ===================================
 
-    st.markdown("---")
+    watchlist_df = pd.DataFrame(watchlist_rows)
 
-    result = pd.DataFrame(rows)
+    st.subheader(
+        f"⏳ WATCHLIST ({len(watchlist_df)} Stocks)"
+    )
 
-    if result.empty:
+    if watchlist_df.empty:
 
         st.warning("No stocks found")
 
     else:
 
-        result = result.sort_values("Symbol")
-
-        st.subheader(
-            f"Watchlist ({len(result)} Stocks)"
-        )
+        watchlist_df = watchlist_df.sort_values("Symbol")
 
         st.dataframe(
-            result,
+            watchlist_df,
             use_container_width=True,
             hide_index=True
         )
 
-        csv = result.to_csv(index=False).encode("utf-8")
+        csv = watchlist_df.to_csv(index=False).encode("utf-8")
 
         st.download_button(
             "Download Watchlist CSV",
