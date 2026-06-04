@@ -3,7 +3,7 @@ import pandas as pd
 import yfinance as yf
 
 st.set_page_config(
-    page_title="Nifty 20D Breakout Scanner (Model B)",
+    page_title="Nifty 20D Breakout Scanner",
     layout="wide"
 )
 
@@ -76,66 +76,42 @@ if st.button("Scan"):
             if pd.isna(current_20d_high):
                 continue
 
-            # ==========================================
+            # ==========================
             # BUY SIGNAL
-            # Model B
-            # Close >= Previous 20 Day High
-            # No breakout in last 20 sessions
-            # ==========================================
+            # Winning Backtest Logic
+            # Close >= Prev 20 Day High
+            # ==========================
 
-            breakout_found = False
-
-            for i in range(len(df) - 20, len(df)):
-
-                if i < 20:
-                    continue
-
-                prev20_high = high.iloc[i-20:i].max()
-
-                if close.iloc[i] >= prev20_high:
-                    breakout_found = True
-                    break
-
-            if (
-                current_close >= current_20d_high
-                and not breakout_found
-            ):
+            if current_close >= current_20d_high:
 
                 buy_rows.append({
                     "Symbol": symbol.replace(".NS", ""),
                     "CMP": round(current_close, 2),
                     "20D High": round(current_20d_high, 2),
+                    "Breakout %": round(
+                        ((current_close / current_20d_high) - 1) * 100,
+                        2
+                    ),
                     "Signal": "BUY"
                 })
 
-            # ==========================================
+                continue
+
+            # ==========================
             # WATCHLIST
-            # No breakout in last 20 sessions
-            # ==========================================
+            # Below breakout level
+            # ==========================
 
-            breakout_found = False
-
-            for i in range(len(df) - 20, len(df)):
-
-                if i < 20:
-                    continue
-
-                prev20_high = high.iloc[i-20:i].max()
-
-                if close.iloc[i] >= prev20_high:
-                    breakout_found = True
-                    break
-
-            if breakout_found:
-                continue
-
-            if current_close >= current_20d_high:
-                continue
+            distance = (
+                (current_20d_high - current_close)
+                / current_20d_high
+            ) * 100
 
             watchlist_rows.append({
                 "Symbol": symbol.replace(".NS", ""),
                 "CMP": round(current_close, 2),
                 "20D High": round(current_20d_high, 2),
+                "Gap %": round(distance, 2),
                 "GTT Price": round(current_20d_high, 2),
                 "Signal": "WAIT"
             })
@@ -148,9 +124,9 @@ if st.button("Scan"):
     progress.empty()
     status.empty()
 
-    # ==========================================
+    # ==========================
     # BUY SIGNALS
-    # ==========================================
+    # ==========================
 
     st.subheader(f"🚀 BUY SIGNALS ({len(buy_rows)})")
 
@@ -158,8 +134,13 @@ if st.button("Scan"):
 
         buy_df = pd.DataFrame(buy_rows)
 
+        buy_df = buy_df.sort_values(
+            "Breakout %",
+            ascending=False
+        )
+
         st.dataframe(
-            buy_df.sort_values("Symbol"),
+            buy_df,
             use_container_width=True,
             hide_index=True
         )
@@ -170,9 +151,9 @@ if st.button("Scan"):
 
     st.divider()
 
-    # ==========================================
+    # ==========================
     # WATCHLIST
-    # ==========================================
+    # ==========================
 
     st.subheader(
         f"⏳ WATCHLIST ({len(watchlist_rows)})"
@@ -182,7 +163,11 @@ if st.button("Scan"):
 
         watchlist_df = pd.DataFrame(
             watchlist_rows
-        ).sort_values("Symbol")
+        )
+
+        watchlist_df = watchlist_df.sort_values(
+            "Gap %"
+        )
 
         st.dataframe(
             watchlist_df,
