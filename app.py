@@ -1,13 +1,14 @@
+```python
 import streamlit as st
 import pandas as pd
 import yfinance as yf
 
 st.set_page_config(
-    page_title="Nifty 20D High Scanner",
+    page_title="Nifty 20D Breakout Scanner (Model B)",
     layout="wide"
 )
 
-st.title("Nifty Fresh 20D Breakout Scanner")
+st.title("Nifty 20D Breakout Scanner (Model B)")
 
 symbols = [
     "ADANIENT.NS","ADANIGREEN.NS","ADANIPORTS.NS","ADANIPOWER.NS",
@@ -68,7 +69,6 @@ if st.button("Scan"):
             close = pd.to_numeric(df["Close"], errors="coerce")
 
             current_close = float(close.iloc[-1])
-            prev_close = float(close.iloc[-2])
 
             current_20d_high = float(
                 high.rolling(20).max().shift(1).iloc[-1]
@@ -79,13 +79,29 @@ if st.button("Scan"):
 
             # ==========================================
             # BUY SIGNAL
-            # Fresh breakout TODAY based on CMP
+            # Model B
+            # Close >= Previous 20 Day High
+            # No breakout in last 20 sessions
             # ==========================================
 
+            breakout_found = False
+
+            for i in range(len(df) - 20, len(df)):
+
+                if i < 20:
+                    continue
+
+                prev20_high = high.iloc[i-20:i].max()
+
+                if close.iloc[i] >= prev20_high:
+                    breakout_found = True
+                    break
+
             if (
-                prev_close < current_20d_high
-                and current_close >= current_20d_high
+                current_close >= current_20d_high
+                and not breakout_found
             ):
+
                 buy_rows.append({
                     "Symbol": symbol.replace(".NS", ""),
                     "CMP": round(current_close, 2),
@@ -107,7 +123,7 @@ if st.button("Scan"):
 
                 prev20_high = high.iloc[i-20:i].max()
 
-                if high.iloc[i] > prev20_high:
+                if close.iloc[i] >= prev20_high:
                     breakout_found = True
                     break
 
@@ -133,9 +149,9 @@ if st.button("Scan"):
     progress.empty()
     status.empty()
 
-    # ============================
+    # ==========================================
     # BUY SIGNALS
-    # ============================
+    # ==========================================
 
     st.subheader(f"🚀 BUY SIGNALS ({len(buy_rows)})")
 
@@ -150,13 +166,14 @@ if st.button("Scan"):
         )
 
     else:
-        st.success("No Fresh Breakouts Today")
+
+        st.success("No 20D Breakouts Today")
 
     st.divider()
 
-    # ============================
+    # ==========================================
     # WATCHLIST
-    # ============================
+    # ==========================================
 
     st.subheader(
         f"⏳ WATCHLIST ({len(watchlist_rows)})"
@@ -164,9 +181,9 @@ if st.button("Scan"):
 
     if watchlist_rows:
 
-        watchlist_df = pd.DataFrame(watchlist_rows)
-
-        watchlist_df = watchlist_df.sort_values("Symbol")
+        watchlist_df = pd.DataFrame(
+            watchlist_rows
+        ).sort_values("Symbol")
 
         st.dataframe(
             watchlist_df,
@@ -174,7 +191,9 @@ if st.button("Scan"):
             hide_index=True
         )
 
-        csv = watchlist_df.to_csv(index=False).encode("utf-8")
+        csv = watchlist_df.to_csv(
+            index=False
+        ).encode("utf-8")
 
         st.download_button(
             "Download Watchlist CSV",
@@ -184,4 +203,8 @@ if st.button("Scan"):
         )
 
     else:
-        st.warning("No Watchlist Stocks Found")
+
+        st.warning(
+            "No Watchlist Stocks Found"
+        )
+```
