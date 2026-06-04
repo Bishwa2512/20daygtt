@@ -75,7 +75,22 @@ if st.button("Scan"):
 
             if pd.isna(current_20d_high):
                 continue
+if current_close >= current_20d_high:
 
+    buy_rows.append({
+        "Symbol": symbol.replace(".NS", ""),
+        "CMP": round(current_close, 2),
+        "20D High": round(current_20d_high, 2),
+        "Breakout %": round(
+            ((current_close / current_20d_high) - 1) * 100,
+            2
+        ),
+        "Breakout Age": breakout_age,
+        "Signal": "BUY"
+    })
+
+    continue
+    
             # ==========================
             # BUY SIGNAL
             # Winning Backtest Logic
@@ -84,18 +99,19 @@ if st.button("Scan"):
 
             if current_close >= current_20d_high:
 
-                buy_rows.append({
-                    "Symbol": symbol.replace(".NS", ""),
-                    "CMP": round(current_close, 2),
-                    "20D High": round(current_20d_high, 2),
-                    "Breakout %": round(
-                        ((current_close / current_20d_high) - 1) * 100,
-                        2
-                    ),
-                    "Signal": "BUY"
-                })
+    buy_rows.append({
+        "Symbol": symbol.replace(".NS", ""),
+        "CMP": round(current_close, 2),
+        "20D High": round(current_20d_high, 2),
+        "Breakout %": round(
+            ((current_close / current_20d_high) - 1) * 100,
+            2
+        ),
+        "Breakout Age": breakout_age,
+        "Signal": "BUY"
+    })
 
-                continue
+    continue
 
             # ==========================
             # WATCHLIST
