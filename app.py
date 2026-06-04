@@ -206,4 +206,3 @@ if st.button("Scan"):
         st.warning(
             "No Watchlist Stocks Found"
         )
-```
