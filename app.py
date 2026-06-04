@@ -64,13 +64,11 @@ if st.button("Scan"):
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
 
-            high = df["High"].astype(float)
-            close = df["Close"].astype(float)
+            high = pd.to_numeric(df["High"], errors="coerce")
+            close = pd.to_numeric(df["Close"], errors="coerce")
 
             current_close = float(close.iloc[-1])
             prev_close = float(close.iloc[-2])
-
-            current_high = float(high.iloc[-1])
 
             current_20d_high = float(
                 high.rolling(20).max().shift(1).iloc[-1]
@@ -79,15 +77,15 @@ if st.button("Scan"):
             if pd.isna(current_20d_high):
                 continue
 
-            # ==================================
-            # FRESH BREAKOUT TODAY
-            # ==================================
+            # ==========================================
+            # BUY SIGNAL
+            # Fresh breakout TODAY based on CMP
+            # ==========================================
 
             if (
                 prev_close < current_20d_high
-                and current_high >= current_20d_high
+                and current_close >= current_20d_high
             ):
-
                 buy_rows.append({
                     "Symbol": symbol.replace(".NS", ""),
                     "CMP": round(current_close, 2),
@@ -95,9 +93,10 @@ if st.button("Scan"):
                     "Signal": "BUY"
                 })
 
-            # ==================================
-            # WATCHLIST LOGIC
-            # ==================================
+            # ==========================================
+            # WATCHLIST
+            # No breakout in last 20 sessions
+            # ==========================================
 
             breakout_found = False
 
@@ -115,7 +114,7 @@ if st.button("Scan"):
             if breakout_found:
                 continue
 
-            if current_close > current_20d_high:
+            if current_close >= current_20d_high:
                 continue
 
             watchlist_rows.append({
@@ -134,38 +133,38 @@ if st.button("Scan"):
     progress.empty()
     status.empty()
 
-    # ===========================
+    # ============================
     # BUY SIGNALS
-    # ===========================
+    # ============================
 
-    st.subheader("🚀 Fresh Breakouts Today")
+    st.subheader(f"🚀 BUY SIGNALS ({len(buy_rows)})")
 
-    buy_df = pd.DataFrame(buy_rows)
+    if buy_rows:
 
-    if buy_df.empty:
-        st.success("No Fresh Breakouts Today")
-    else:
+        buy_df = pd.DataFrame(buy_rows)
+
         st.dataframe(
             buy_df.sort_values("Symbol"),
             use_container_width=True,
             hide_index=True
         )
 
+    else:
+        st.success("No Fresh Breakouts Today")
+
     st.divider()
 
-    # ===========================
+    # ============================
     # WATCHLIST
-    # ===========================
-
-    watchlist_df = pd.DataFrame(watchlist_rows)
+    # ============================
 
     st.subheader(
-        f"⏳ Watchlist ({len(watchlist_df)} Stocks)"
+        f"⏳ WATCHLIST ({len(watchlist_rows)})"
     )
 
-    if watchlist_df.empty:
-        st.warning("No stocks found")
-    else:
+    if watchlist_rows:
+
+        watchlist_df = pd.DataFrame(watchlist_rows)
 
         watchlist_df = watchlist_df.sort_values("Symbol")
 
@@ -183,3 +182,6 @@ if st.button("Scan"):
             file_name="watchlist.csv",
             mime="text/csv"
         )
+
+    else:
+        st.warning("No Watchlist Stocks Found")
