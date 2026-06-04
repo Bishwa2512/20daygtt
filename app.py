@@ -7,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Nifty 20D High GTT Scanner")
+st.title("Nifty Fresh 20D Breakout Scanner")
 
 symbols = [
     "ADANIENT.NS","ADANIGREEN.NS","ADANIPORTS.NS","ADANIPOWER.NS",
@@ -38,8 +38,8 @@ symbols = [
 
 if st.button("Scan"):
 
-    watchlist_rows = []
     buy_rows = []
+    watchlist_rows = []
 
     progress = st.progress(0)
     status = st.empty()
@@ -68,6 +68,9 @@ if st.button("Scan"):
             close = df["Close"].astype(float)
 
             current_close = float(close.iloc[-1])
+            prev_close = float(close.iloc[-2])
+
+            current_high = float(high.iloc[-1])
 
             current_20d_high = float(
                 high.rolling(20).max().shift(1).iloc[-1]
@@ -76,11 +79,14 @@ if st.button("Scan"):
             if pd.isna(current_20d_high):
                 continue
 
-            # -------------------------
-            # BUY SIGNALS
-            # -------------------------
+            # ==================================
+            # FRESH BREAKOUT TODAY
+            # ==================================
 
-            if current_close >= current_20d_high:
+            if (
+                prev_close < current_20d_high
+                and current_high >= current_20d_high
+            ):
 
                 buy_rows.append({
                     "Symbol": symbol.replace(".NS", ""),
@@ -89,9 +95,9 @@ if st.button("Scan"):
                     "Signal": "BUY"
                 })
 
-            # -------------------------
-            # YOUR ORIGINAL LOGIC
-            # -------------------------
+            # ==================================
+            # WATCHLIST LOGIC
+            # ==================================
 
             breakout_found = False
 
@@ -101,9 +107,8 @@ if st.button("Scan"):
                     continue
 
                 prev20_high = high.iloc[i-20:i].max()
-                current_high = high.iloc[i]
 
-                if current_high > prev20_high:
+                if high.iloc[i] > prev20_high:
                     breakout_found = True
                     break
 
@@ -129,20 +134,17 @@ if st.button("Scan"):
     progress.empty()
     status.empty()
 
-    # ===================================
+    # ===========================
     # BUY SIGNALS
-    # ===================================
+    # ===========================
+
+    st.subheader("🚀 Fresh Breakouts Today")
 
     buy_df = pd.DataFrame(buy_rows)
 
-    st.subheader("🚀 BUY SIGNALS TODAY")
-
     if buy_df.empty:
-
-        st.success("No Buy Signals Today")
-
+        st.success("No Fresh Breakouts Today")
     else:
-
         st.dataframe(
             buy_df.sort_values("Symbol"),
             use_container_width=True,
@@ -151,20 +153,18 @@ if st.button("Scan"):
 
     st.divider()
 
-    # ===================================
+    # ===========================
     # WATCHLIST
-    # ===================================
+    # ===========================
 
     watchlist_df = pd.DataFrame(watchlist_rows)
 
     st.subheader(
-        f"⏳ WATCHLIST ({len(watchlist_df)} Stocks)"
+        f"⏳ Watchlist ({len(watchlist_df)} Stocks)"
     )
 
     if watchlist_df.empty:
-
         st.warning("No stocks found")
-
     else:
 
         watchlist_df = watchlist_df.sort_values("Symbol")
