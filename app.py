@@ -73,7 +73,7 @@ if st.button("Scan"):
                 })
             else:
                 gap = ((current_20d_high-current_close)/current_20d_high)*100
-                if gap <= 3:
+                if gap <= 50:
                     watchlist_rows.append({
                         "Symbol": symbol.replace(".NS",""),
                         "CMP": round(current_close,2),
