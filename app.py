@@ -49,7 +49,7 @@ if st.button("Scan"):
             high = pd.to_numeric(df["High"], errors="coerce")
             close = pd.to_numeric(df["Close"], errors="coerce")
 
-            current_close = float(close.iloc[-1])
+            current_close = float(pd.to_numeric(df["Close"], errors="coerce").dropna().iloc[-1])
             current_20d_high = float(high.rolling(20).max().shift(1).iloc[-1])
 
             if pd.isna(current_20d_high):
@@ -73,16 +73,16 @@ if st.button("Scan"):
                 })
             else:
                 gap = ((current_20d_high-current_close)/current_20d_high)*100
+                if gap <= 3:
+                    watchlist_rows.append({
+                        "Symbol": symbol.replace(".NS",""),
+                        "CMP": round(current_close,2),
+                        "20D High": round(current_20d_high,2),
+                        "Gap %": round(gap,2)
+                    })
 
-                watchlist_rows.append({
-                    "Symbol": symbol.replace(".NS",""),
-                    "CMP": round(current_close,2),
-                    "20D High": round(current_20d_high,2),
-                    "Gap %": round(gap,2)
-                })
-
-        except Exception:
-            pass
+        except Exception as e:
+            st.error(f"{symbol}: {e}")
 
     st.subheader(f"🚀 BUY SIGNALS ({len(buy_rows)})")
 
