@@ -377,3 +377,92 @@ if st.button("Clear GitHub Watchlist"):
     st.session_state.dc_watchlist = []
     save_watchlist([])
     st.success("Watchlist cleared")
+
+
+# ==========================================================
+# GOOGLE SHEET FINAL LIST (Independent of Donchian Scanner)
+# ==========================================================
+
+import requests
+
+st.divider()
+st.header("📋 Final List")
+
+# Replace with your Final List tab gid
+FINAL_LIST_GID = "YOUR_GID_HERE"
+
+CSV_URL = (
+    f"https://docs.google.com/spreadsheets/d/"
+    f"1wopIdWgQMfBIJ9DnKcGDVmdDM2JiV06HgZLEkNUZaKk"
+    f"/export?format=csv&gid={FINAL_LIST_GID}"
+)
+
+STATUS_FILE = "status_history.json"
+
+
+def load_status_history():
+    try:
+        g = Github(TOKEN)
+        repo = g.get_repo(REPO_NAME)
+        file = repo.get_contents(STATUS_FILE)
+        return json.loads(file.decoded_content.decode())
+    except:
+        return {}
+
+
+def save_status_history(data):
+    g = Github(TOKEN)
+    repo = g.get_repo(REPO_NAME)
+
+    content = json.dumps(data, indent=4)
+
+    try:
+        file = repo.get_contents(STATUS_FILE)
+        repo.update_file(
+            STATUS_FILE,
+            "Update Status History",
+            content,
+            file.sha,
+        )
+    except:
+        repo.create_file(
+            STATUS_FILE,
+            "Create Status History",
+            content,
+        )
+
+
+try:
+    sheet = pd.read_csv(CSV_URL)
+
+    history = load_status_history()
+
+    for _, row in sheet.iterrows():
+
+        symbol = str(row["Symbol"]).strip()
+        status = str(row["Status"]).strip().upper()
+
+        if symbol not in history:
+            history[symbol] = {
+                "status": status,
+                "changed_on": pd.Timestamp.now().strftime("%d-%b-%Y %H:%M")
+            }
+
+        elif history[symbol]["status"] != status:
+            history[symbol]["status"] = status
+            history[symbol]["changed_on"] = pd.Timestamp.now().strftime("%d-%b-%Y %H:%M")
+
+    save_status_history(history)
+
+    sheet["Status Changed On"] = sheet["Symbol"].map(
+        lambda x: history.get(str(x), {}).get("changed_on", "")
+    )
+
+    st.dataframe(
+        sheet,
+        use_container_width=True,
+        hide_index=True
+    )
+
+except Exception as e:
+    st.error(f"Unable to load Final List: {e}")
