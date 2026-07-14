@@ -391,11 +391,7 @@ st.header("📋 Final List")
 # Replace with your Final List tab gid
 FINAL_LIST_GID = "YOUR_GID_HERE"
 
-CSV_URL = (
-    f"https://docs.google.com/spreadsheets/d/"
-    f"1wopIdWgQMfBIJ9DnKcGDVmdDM2JiV06HgZLEkNUZaKk"
-    f"/export?format=csv&gid={FINAL_LIST_GID}"
-)
+CSV_URL = "https://docs.google.com/spreadsheets/d/1wopIdWgQMfBIJ9DnKcGDVmdDM2JiV06HgZLEkNUZaKk/export?format=csv&gid=1924424194"
 
 STATUS_FILE = "status_history.json"
 
